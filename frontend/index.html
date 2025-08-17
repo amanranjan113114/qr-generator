@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>QR Code Generator (FastAPI)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <style>
+    :root { --bg:#0b0b0c; --panel:#111214; --muted:#6b7280; --text:#e5e7eb; --accent:#22c55e; --border:#1f2937; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f4f5f7; --panel:#ffffff; --muted:#6b7280; --text:#0b0b0c; --accent:#16a34a; --border:#e5e7eb; }
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:24px}
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px 18px}
+    .row{display:grid;grid-template-columns:160px 1fr;gap:14px;margin:12px 0}
+    .row label{padding-top:8px;color:var(--muted)}
+    .row input,.row select,.row textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:transparent;color:inherit;outline:none}
+    .hint{color:var(--muted);font-size:12px;margin-top:4px}
+    .btn{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--border);padding:10px 14px;border-radius:12px;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    .btn.secondary{background:transparent;color:inherit}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    h1{font-size:28px;margin:6px 0 16px} h2{font-size:18px;margin:18px 0 8px;color:var(--muted)}
+    .qrbox{display:flex;align-items:center;justify-content:center;border:1px dashed var(--border);border-radius:16px;min-height:360px;padding:20px;overflow:auto;background:rgba(127,127,127,0.03)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .hidden{display:none !important}
+    .sep{height:1px;background:var(--border);margin:16px 0}
+    code.inline{background:rgba(127,127,127,0.12);padding:2px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>QR Code Generator</h1>
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <label for="type">QR Type</label>
+          <select id="type">
+            <option value="text">Text</option>
+            <option value="url">URL / Weblink</option>
+            <option value="tel">Phone (tel:)</option>
+            <option value="sms">SMS</option>
+            <option value="email">Email (mailto:)</option>
+            <option value="wifi">Wi‑Fi</option>
+            <option value="mecard">MeCard (contact)</option>
+          </select>
+        </div>
+
+        <!-- Dynamic fields -->
+        <div id="fields-text" class="fields">
+          <div class="row">
+            <label>Text</label>
+            <textarea id="text" rows="3" placeholder="Any text..."></textarea>
+          </div>
+        </div>
+
+        <div id="fields-url" class="fields hidden">
+          <div class="row">
+            <label>URL</label>
+            <input id="url" placeholder="https://example.com">
+          </div>
+        </div>
+
+        <div id="fields-tel" class="fields hidden">
+          <div class="row">
+            <label>Number</label>
+            <input id="tel-number" placeholder="+919876543210">
+          </div>
+        </div>
+
+        <div id="fields-sms" class="fields hidden">
+          <div class="row">
+            <label>Number</label>
+            <input id="sms-number" placeholder="+919876543210">
+          </div>
+          <div class="row">
+            <label>Message</label>
+            <textarea id="sms-message" rows="2" placeholder="Hello!"></textarea>
+          </div>
+        </div>
+
+        <div id="fields-email" class="fields hidden">
+          <div class="row">
+            <label>To</label>
+            <input id="email-to" placeholder="user@example.com">
+          </div>
+          <div class="row">
+            <label>Subject</label>
+            <input id="email-subject" placeholder="(optional)">
+          </div>
+          <div class="row">
+            <label>Body</label>
+            <textarea id="email-body" rows="3" placeholder="(optional)"></textarea>
+          </div>
+        </div>
+
+        <div id="fields-wifi" class="fields hidden">
+          <div class="row">
+            <label>SSID</label>
+            <input id="wifi-ssid" placeholder="MyWifi">
+          </div>
+          <div class="row">
+            <label>Security</label>
+            <select id="wifi-security">
+              <option value="WPA">WPA/WPA2</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">No password</option>
+            </select>
+          </div>
+          <div class="row" id="wifi-pass-row">
+            <label>Password</label>
+            <input id="wifi-password" placeholder="••••••••">
+          </div>
+          <div class="row">
+            <label>Hidden SSID</label>
+            <select id="wifi-hidden">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="fields-mecard" class="fields hidden">
+          <div class="row">
+            <label>Full Name</label>
+            <input id="mecard-name" placeholder="Aman Ranjan">
+          </div>
+          <div class="row">
+            <label>Phone</label>
+            <input id="mecard-phone" placeholder="+919876543210">
+          </div>
+          <div class="row">
+            <label>Email</label>
+            <input id="mecard-email" placeholder="user@example.com">
+          </div>
+          <div class="row">
+            <label>Website</label>
+            <input id="mecard-url" placeholder="https://example.com">
+          </div>
+          <div class="row">
+            <label>Organisation</label>
+            <input id="mecard-org" placeholder="Company">
+          </div>
+          <div class="row">
+            <label>Address</label>
+            <input id="mecard-address" placeholder="City, Country">
+          </div>
+          <div class="row">
+            <label>Note</label>
+            <input id="mecard-note" placeholder="(optional)">
+          </div>
+        </div>
+
+        <div class="sep"></div>
+        <h2>Appearance</h2>
+        <div class="row">
+          <label>Error correction</label>
+          <select id="error">
+            <option value="L">L (7%)</option>
+            <option value="M" selected>M (15%)</option>
+            <option value="Q">Q (25%)</option>
+            <option value="H">H (30%)</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Scale (pixels/module)</label>
+          <input id="scale" type="number" min="1" max="50" value="10">
+        </div>
+        <div class="row">
+          <label>Border (modules)</label>
+          <input id="border" type="number" min="0" max="20" value="4">
+        </div>
+        <div class="row">
+          <label>Format</label>
+          <select id="format">
+            <option value="png" selected>PNG</option>
+            <option value="svg">SVG</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Dark color</label>
+          <input id="dark" type="text" value="#000000">
+        </div>
+        <div class="row">
+          <label>Light color</label>
+          <input id="light" type="text" value="#FFFFFF">
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="generate">Generate QR</button>
+          <button class="btn secondary" id="reset">Reset</button>
+        </div>
+        <p class="hint">Tip: PNG for general use, SVG for infinite‑scaling vector graphics.</p>
+      </div>
+
+      <div class="card">
+        <h2>Preview</h2>
+        <div class="qrbox">
+          <img id="qr-img" alt="QR preview" style="max-width:100%;height:auto;display:none;">
+          <object id="qr-svg" type="image/svg+xml" style="width:100%;height:100%;display:none;"></object>
+          <div id="placeholder" class="hint">Your QR will appear here.</div>
+        </div>
+        <div class="actions">
+          <a id="download" class="btn" download="qr.png" href="#" aria-disabled="true">Download</a>
+          <button id="copy" class="btn secondary" disabled>Copy image</button>
+        </div>
+        <p class="hint">This app runs on a Python FastAPI backend using <code class="inline">segno</code>.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (q) => document.querySelector(q);
+const typeEl = $("#type");
+const fields = {
+  text: $("#fields-text"),
+  url: $("#fields-url"),
+  tel: $("#fields-tel"),
+  sms: $("#fields-sms"),
+  email: $("#fields-email"),
+  wifi: $("#fields-wifi"),
+  mecard: $("#fields-mecard")
+};
+const wifiPassRow = $("#wifi-pass-row");
+const imgEl = $("#qr-img");
+const svgEl = $("#qr-svg");
+const placeholder = $("#placeholder");
+const downloadEl = $("#download");
+const copyBtn = $("#copy");
+
+function showFields(type) {
+  Object.values(fields).forEach(el => el.classList.add("hidden"));
+  (fields[type] || fields.text).classList.remove("hidden");
+  // Special handling: wifi password row visibility
+  if (type === "wifi") {
+    wifiPassRow.style.display = ($("#wifi-security").value === "nopass") ? "none" : "grid";
+  }
+}
+typeEl.addEventListener("change", () => showFields(typeEl.value));
+$("#wifi-security").addEventListener("change", e => {
+  wifiPassRow.style.display = (e.target.value === "nopass") ? "none" : "grid";
+});
+
+function payloadFromUI() {
+  const type = typeEl.value;
+  const common = {
+    error: $("#error").value,
+    scale: parseInt($("#scale").value || "10", 10),
+    border: parseInt($("#border").value || "4", 10),
+    format: $("#format").value,
+    dark: $("#dark").value || "#000000",
+    light: $("#light").value || "#FFFFFF"
+  };
+  let data = {};
+  if (type === "text") data = { text: $("#text").value.trim() };
+  if (type === "url") data = { url: $("#url").value.trim() };
+  if (type === "tel") data = { number: $("#tel-number").value.trim() };
+  if (type === "sms") data = { number: $("#sms-number").value.trim(), message: $("#sms-message").value };
+  if (type === "email") data = { to: $("#email-to").value.trim(), subject: $("#email-subject").value, body: $("#email-body").value };
+  if (type === "wifi") data = { ssid: $("#wifi-ssid").value.trim(), security: $("#wifi-security").value, password: $("#wifi-password").value, hidden: $("#wifi-hidden").value === "true" };
+  if (type === "mecard") data = { name: $("#mecard-name").value.trim(), phone: $("#mecard-phone").value.trim(), email: $("#mecard-email").value.trim(), url: $("#mecard-url").value.trim(), org: $("#mecard-org").value.trim(), address: $("#mecard-address").value.trim(), note: $("#mecard-note").value.trim() };
+  return { type, data, ...common };
+}
+
+async function generateQR() {
+  const payload = payloadFromUI();
+  try {
+    const res = await fetch("/api/qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || ("HTTP " + res.status));
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    placeholder.style.display = "none";
+    if (blob.type === "image/svg+xml") {
+      svgEl.style.display = "block";
+      imgEl.style.display = "none";
+      svgEl.data = url;
+      downloadEl.setAttribute("download", "qr.svg");
+    } else {
+      imgEl.style.display = "block";
+      svgEl.style.display = "none";
+      imgEl.src = url;
+      downloadEl.setAttribute("download", "qr.png");
+    }
+    downloadEl.href = url;
+    downloadEl.removeAttribute("aria-disabled");
+    copyBtn.disabled = false;
+  } catch (e) {
+    alert("Failed to generate QR: " + e.message);
+  }
+}
+
+async function copyImage() {
+  try {
+    const dl = downloadEl.href;
+    if (!dl) return;
+    const blob = await fetch(dl).then(r => r.blob());
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => (copyBtn.textContent = "Copy image"), 1200);
+  } catch (e) {
+    alert("Clipboard blocked by browser: " + e.message);
+  }
+}
+
+$("#generate").addEventListener("click", (e) => { e.preventDefault(); generateQR(); });
+$("#reset").addEventListener("click", (e) => { e.preventDefault(); document.querySelector("form")?.reset(); imgEl.style.display="none"; svgEl.style.display="none"; placeholder.style.display="block"; });
+copyBtn.addEventListener("click", (e) => { e.preventDefault(); copyImage(); });
+
+// Initial
+showFields(typeEl.value);
+</script>
+</body>
+</html>
